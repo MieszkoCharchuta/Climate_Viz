@@ -1,70 +1,84 @@
 library(tidyverse)
-
+library(glue)
 t_diff <- read_csv("data/GLB.Ts+dSST.csv", skip = 1, na = "***") %>%
   select(year = Year, month.abb) %>%
   pivot_longer(-year, names_to="month", values_to="t_diff") %>%
   drop_na()
-# mutate(month = factor(month, levels = month.abb))
-
-# Careful with that ! ^ That's caused an error!
-
-
-last_dec <- t_diff %>%
-  filter(month == "Dec") %>%
-  mutate(year = year + 1,
-         month = "last_Dec")
-
+# last_dec <- t_diff %>%
+#   filter(month == "Dec") %>%
+#   mutate(year = year + 1,
+#          month = "last_Dec")
+# 
 next_jan <- t_diff %>%
   filter(month == "Jan") %>%
   mutate(year = year - 1,
          month = "next_Jan")
 
-t_data <- bind_rows(last_dec, t_diff, next_jan) %>%
-  mutate(month = factor(month, levels = c("last_Dec", month.abb, "next_Jan")),
-         month_number = as.numeric(month) - 1,
-         this_year = year == 2022)
+t_data <- bind_rows(t_diff, next_jan) %>%
+  mutate(month = factor(month, levels = c(month.abb, "next_Jan")),
+         month_number = as.numeric(month))
 
 annotation <- t_data %>%
   slice_max(year) %>%
   slice_max(month_number)
 
+temp_lines <- tibble(
+  x =12,
+  y = c(1.5, 2.0),
+  labels = c ("1.5\u00B0C", "2.0\u00B0C")
+)
+month_labels <- tibble(
+  x = 1:12,
+  labels = month.abb,
+  y = 2.7
+)
+
 t_data %>% 
-  ggplot(aes(x=month_number, y=t_diff, group=year,
-             color=year, size=this_year)) +
-  geom_hline(yintercept = 0, color="white") +
+  ggplot(aes(x=month_number, y=t_diff, group=year, color=year)) +
+  geom_col(data = month_labels, aes(x=x+0.5, y=-2),  fill = "black",
+           width = 1,
+           inherit.aes = FALSE) +
+  geom_col(data = month_labels, aes(x=x+0.5, y=2.4),  fill = "black",
+           width = 1,
+           inherit.aes = FALSE) +
+  geom_hline(yintercept = c(1.5, 2.0), color="red") +
   geom_line() +
-  geom_text(data = annotation,
-            aes(x=month_number, y=t_diff, label=year, color=year),
-            inherit.aes = FALSE,
-            hjust = 0, size = 5, nudge_x = 0.15, fontface = "bold") +
+  geom_point(data=annotation, aes(x=month_number, y=t_diff, color=year),
+             size = 2,
+             inherit.aes = FALSE) +
+  geom_label(data = temp_lines, aes(x=x, y=y, label = labels),
+             color = "red", fill = "black", label.size = 0,
+             inherit.aes = FALSE) +
+  geom_text(data = month_labels, aes(x=x, y=y, label=labels), 
+            angle = seq(360 - 360/12, 0, length.out = 12),
+            inherit.aes =  FALSE,
+            color = "white") +
+  geom_text(aes(x=1, y=-1.3, label = "2022"), size = 6) +
   scale_x_continuous(breaks=1:12,
-                     labels=month.abb,
+                     labels=month.abb, expand = c(0,0),
                      sec.axis = dup_axis(name = NULL, labels=NULL)) +
   scale_y_continuous(breaks = seq(-2, 2, 0.2),
+                     limits = c(-2.0, 2.7),  expand = c(0,-0.7),
                      sec.axis = dup_axis(name = NULL, labels=NULL)) +
-  scale_size_manual(breaks= c(FALSE, TRUE),
-                    values = c(0.25, 1), guide = "none") +
+  # scale_size_manual(breaks= c(FALSE, TRUE),
+  #                   values = c(0.25, 1), guide = "none") +
   scale_color_viridis_c(breaks = seq(1880, 2020, 20),
-                        guide = guide_colorbar(frame.colour = "white",
-                                               frame.linewidth = 1)) +
-  coord_cartesian(xlim=c(1,12)) +
+                        guide = "none") +
+  # coord_cartesian(xlim=c(1,12)) +
+  coord_polar(start = 2*pi/12) +
   labs(x = NULL,
-       y = "Temperature change since pre-industrial time [\u00B0C]",
-       title = "Global temperature change since 1880 by month") +
+       y = NULL,
+       title = "Global temperature change (1880-2022)") +
   theme(
-    panel.background = element_rect(fill="black", color="white", size=1),
-    plot.background = element_rect(fill = "#444444"),
+    panel.background = element_rect(fill="#444444", size=1),
+    plot.background = element_rect(fill = "#444444", color = "#444444"),
     panel.grid = element_blank(),
     axis.text = element_text(color="white", size=13),
-    axis.ticks = element_line(color="white"),
-    axis.ticks.length = unit(-5, "pt"),
+    axis.text.y = element_blank(), 
+    axis.text.x = element_blank(), 
+    axis.title.y = element_blank(),
+    axis.ticks = element_blank(),
     axis.title = element_text(color="white", size=13),
-    plot.title = element_text(color="white", hjust = 0.5,size = 15),
-    legend.title = element_blank(),
-    legend.background = element_rect(fill = NA),
-    legend.text = element_text(color="white"),
-    legend.key.height = unit(55, "pt")
-  )
+    plot.title = element_text(color="white", hjust = 0.5,size = 15))
 
-ggsave("figures/temperature_lines.png", width=8, height=4.5)
-
+  ggsave("figures/climate_spiral.png", width=8, height=4.5)
