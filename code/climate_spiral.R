@@ -4,11 +4,6 @@ t_diff <- read_csv("data/GLB.Ts+dSST.csv", skip = 1, na = "***") %>%
   select(year = Year, month.abb) %>%
   pivot_longer(-year, names_to="month", values_to="t_diff") %>%
   drop_na()
-# last_dec <- t_diff %>%
-#   filter(month == "Dec") %>%
-#   mutate(year = year + 1,
-#          month = "last_Dec")
-# 
 next_jan <- t_diff %>%
   filter(month == "Jan") %>%
   mutate(year = year - 1,
@@ -60,11 +55,8 @@ t_data %>%
   scale_y_continuous(breaks = seq(-2, 2, 0.2),
                      limits = c(-2.0, 2.7),  expand = c(0,-0.7),
                      sec.axis = dup_axis(name = NULL, labels=NULL)) +
-  # scale_size_manual(breaks= c(FALSE, TRUE),
-  #                   values = c(0.25, 1), guide = "none") +
   scale_color_viridis_c(breaks = seq(1880, 2020, 20),
                         guide = "none") +
-  # coord_cartesian(xlim=c(1,12)) +
   coord_polar(start = 2*pi/12) +
   labs(x = NULL,
        y = NULL,
